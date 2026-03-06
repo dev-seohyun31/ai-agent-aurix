@@ -10,9 +10,13 @@ AURIX 기술 문서 기반 AI Agent의 프로토타입 입니다.
 ```
 ai-agent-aurix/
 ├── vectordb.py        # Vector DB 구축 및 RAG 질문/답변
+├── evaluate.py        # 검색 품질 및 할루시네이션 평가
+├── test_cases.json    # 평가용 테스트 케이스
 ├── docs/              # PDF 문서 폴더 (git 제외)
 ├── chroma_db/         # Vector DB 저장소 (git 제외, 자동 생성)
 ├── .venv/             # 가상환경 (git 제외)
+├── .env               # API 키 (git 제외)
+├── .env.example       # API 키 양식 (git 포함)
 ├── requirements.txt   # 패키지 목록
 └── README.md
 ```
@@ -120,6 +124,82 @@ PDF가 처음 로딩될 때 인덱싱이 자동 실행됩니다.
 ```
 
 종료하려면 `q` 입력.
+
+---
+
+## 평가 실행 (evaluate.py)
+
+`vectordb.py`로 인덱싱이 완료된 상태에서 실행합니다.
+
+### 기본 실행 — 전체 테스트
+
+```bash
+python evaluate.py
+```
+
+```
+🧪 RAG 평가 시작 — 6개 케이스
+ℹ️  인덱스 로드 완료 (255개 청크)
+
+[TC-001] 문서에 있는 정의 질문
+질문: EVADC가 뭐야?
+...
+⚠️  유사도 상위: 0.459
+❌ 키워드 매칭: 24%
+
+📊 평가 요약
+총 테스트      : 6개
+평균 유사도    : 0.451  ✅
+평균 키워드 매칭: 51%   ✅
+할루시네이션 억제: 2/2  ✅
+평균 응답시간  : 67.16초
+```
+
+### 옵션별 실행
+
+```bash
+# 유형별 테스트
+python evaluate.py --type factual         # 정의·수치·구조 질문만
+python evaluate.py --type hallucination   # 할루시네이션 테스트만
+python evaluate.py --type retrieval       # 복합 질문만
+
+# 특정 케이스만
+python evaluate.py --id TC-001
+```
+
+### 테스트 케이스 추가 (test_cases.json)
+
+PDF 내용을 보면서 정답을 아는 질문을 직접 추가합니다.
+
+```json
+{
+  "test_cases": [
+    {
+      "id": "TC-007",
+      "type": "factual",
+      "description": "추가할 질문 설명",
+      "question": "질문 내용",
+      "ground_truth": "PDF에서 찾은 실제 정답"
+    }
+  ]
+}
+```
+
+케이스 유형은 세 가지입니다.
+
+| 유형 | 용도 |
+|---|---|
+| `factual` | 문서에 있는 내용 — 정의, 수치, 구조 질문 |
+| `hallucination` | 문서에 없는 내용 — 거부 여부 확인, `ground_truth`는 `"문서에서 찾을 수 없습니다"` 고정 |
+| `retrieval` | 여러 청크에 걸친 복합 질문 |
+
+### 평가 결과 해석
+
+| 지표 | 양호 기준 | 낮을 때 조치 |
+|---|---|---|
+| 유사도 | 0.35 이상 | `chunk_size` 줄이기 또는 `similarity_top_k` 늘리기 |
+| 키워드 매칭 | 50% 이상 | `chunk_overlap` 늘리기 또는 LLM 교체 |
+| 할루시네이션 억제 | 100% | `system_prompt` 강화 |
 
 ---
 

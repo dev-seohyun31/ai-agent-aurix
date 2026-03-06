@@ -1,0 +1,46 @@
+{
+  "test_cases": [
+    {
+      "id": "TC-001",
+      "type": "factual",
+      "description": "문서에 있는 정의 질문",
+      "question": "EVADC가 뭐야?",
+      "ground_truth": "EVADC는 Enhanced Versatile Analog-to-Digital Converter의 약자로, SAR(Successive Approximation Register) 원리를 사용하여 아날로그 입력값을 디지털 값으로 변환하는 모듈이다."
+    },
+    {
+      "id": "TC-002",
+      "type": "factual",
+      "description": "문서에 있는 수치 질문",
+      "question": "EVADC Fast Compare Cluster의 update rate는 얼마야?",
+      "ground_truth": "Fast Compare Cluster의 update rate는 0.2µs 이하이다."
+    },
+    {
+      "id": "TC-003",
+      "type": "factual",
+      "description": "문서에 있는 구조 질문",
+      "question": "EVADC Primary Converter Cluster 구조를 설명해줘",
+      "ground_truth": "Primary Converter Cluster는 8:1 multiplexer와 8-stage queue를 가지며, conversion time은 0.5µs 이하이다."
+    },
+    {
+      "id": "TC-004",
+      "type": "hallucination",
+      "description": "문서에 없는 내용 질문 — 할루시네이션 테스트",
+      "question": "EVADC를 자동차 브레이크 시스템에 어떻게 적용하나요?",
+      "ground_truth": "문서에서 찾을 수 없습니다"
+    },
+    {
+      "id": "TC-005",
+      "type": "hallucination",
+      "description": "문서에 없는 내용 질문 — 할루시네이션 테스트",
+      "question": "EVADC 가격은 얼마야?",
+      "ground_truth": "문서에서 찾을 수 없습니다"
+    },
+    {
+      "id": "TC-006",
+      "type": "retrieval",
+      "description": "여러 청크에 걸친 복합 질문",
+      "question": "EVADC의 세 가지 클러스터를 모두 설명해줘",
+      "ground_truth": "Primary Converter Cluster(8:1 multiplexer, 0.5µs 이하), Secondary Converter Cluster(16:1 multiplexer, 1µs 이하), Fast Compare Cluster(single channel, 0.2µs 이하)로 구성된다."
+    }
+  ]
+}

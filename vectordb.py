@@ -6,13 +6,16 @@ from llama_index.core import StorageContext
 import chromadb
 
 # ── 1. 모델 설정 ──────────────────────────────────────
+# TODO Gemini, Claude 등 크래딧을 충전해야 응답 품질을 높일 수 있습니다.
 Settings.llm = Ollama(
     model="llama3.2",
     request_timeout=120.0,
     system_prompt=(
-        "당신은 연구소 내부 문서 기반 전문 어시스턴트입니다. "
-        "반드시 제공된 문서 내용만을 근거로 답변하세요. "
-        "문서에 없는 내용은 '문서에서 찾을 수 없습니다'라고 답하세요."
+        "You are a technical document assistant. "
+        "ALWAYS respond in Korean only. "
+        "NEVER mix other languages. "
+        "Only use information from the provided documents. "
+        "If not found, say '문서에서 찾을 수 없습니다'."
     )
 )
 

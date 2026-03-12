@@ -16,7 +16,7 @@ import time
 from dotenv import load_dotenv
 from llama_index.core import VectorStoreIndex, Settings
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.llms.ollama import Ollama
+from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.core import StorageContext
 import chromadb
@@ -39,9 +39,9 @@ def info(msg):  print(f"{BLUE}ℹ️  {msg}{RESET}")
 # ── 모델 설정 ─────────────────────────────────────────
 def setup():
     Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-m3")
-    Settings.llm = Ollama(
-        model="llama3.2",
-        request_timeout=120.0,
+    Settings.llm = GoogleGenAI(
+        model="gemini-2.5-flash",
+        api_key=os.environ["GEMINI_API_KEY"],
         system_prompt=(
             "You are a technical document assistant. "
             "ALWAYS respond in Korean only. "

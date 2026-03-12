@@ -24,10 +24,10 @@ import chromadb
 load_dotenv()
 
 # ── 설정값 ────────────────────────────────────────────
-NEO4J_URL      = "bolt://localhost:7687"
-NEO4J_USER     = "neo4j"
-NEO4J_PASSWORD = "aurix1234"
-CHROMA_PATH    = "../chroma_db"
+NEO4J_URL      = os.environ["NEO4J_URL"]
+NEO4J_USER     = os.environ["NEO4J_USERNAME"]
+NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
+CHROMA_PATH    = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "chroma_db")
 CHROMA_COLLECTION = "research_docs"
 
 # ── 색상 출력 ─────────────────────────────────────────

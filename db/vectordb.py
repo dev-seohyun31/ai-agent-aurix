@@ -1,21 +1,25 @@
+import os
+from dotenv import load_dotenv
+
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
-from llama_index.llms.ollama import Ollama
+from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.core import StorageContext
 import chromadb
 
+load_dotenv()
+
 # ── 1. 모델 설정 ──────────────────────────────────────
-# TODO Gemini, Claude 등 크래딧을 충전해야 응답 품질을 높일 수 있습니다.
-Settings.llm = Ollama(
-    model="llama3.2",
-    request_timeout=120.0,
+Settings.llm = GoogleGenAI(
+    model="gemini-2.5-flash",
+    api_key=os.environ["GEMINI_API_KEY"],
     system_prompt=(
         "You are a technical document assistant. "
         "ALWAYS respond in Korean only. "
-        "NEVER mix other languages. "
+        "NEVER mix other languages into your response. "
         "Only use information from the provided documents. "
-        "If not found, say '문서에서 찾을 수 없습니다'."
+        "If the answer is not in the documents, say '문서에서 찾을 수 없습니다'."
     )
 )
 
@@ -28,7 +32,7 @@ Settings.chunk_size = 512
 Settings.chunk_overlap = 50
 
 # ── 2. Vector DB 연결 ─────────────────────────────────
-chroma_client = chromadb.PersistentClient(path="./chroma_db")
+chroma_client = chromadb.PersistentClient(path="../chroma_db")
 chroma_collection = chroma_client.get_or_create_collection("research_docs")
 vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
 storage_context = StorageContext.from_defaults(vector_store=vector_store)
@@ -39,7 +43,7 @@ if chroma_collection.count() > 0:
     index = VectorStoreIndex.from_vector_store(vector_store)
 else:
     print("📄 PDF 로딩 중...")
-    documents = SimpleDirectoryReader("./docs").load_data()
+    documents = SimpleDirectoryReader("../docs").load_data()
     print(f"✅ {len(documents)}페이지 로드 완료")
     print("🔍 인덱싱 중...")
     index = VectorStoreIndex.from_documents(

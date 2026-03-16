@@ -206,10 +206,10 @@ def main():
     )
     args = parser.parse_args()
 
-    # 1. 모델 설정
+    # 1. Configurations - model
     setup_models()
 
-    # 2. Neo4j 연결
+    # 2. Loading to Neo4j
     driver = GraphDatabase.driver(NEO4J_URL, auth=(NEO4J_USER, NEO4J_PASSWORD))
     graph_store = Neo4jGraphStore(
         username=NEO4J_USER,
@@ -222,7 +222,7 @@ def main():
     if args.reset:
         reset_neo4j(driver)
 
-    # 3. 인덱싱 또는 재사용
+    # 3. Indexing & Storing
     node_count = get_node_count(driver)
     if node_count > 0:
         print(f"✅ 기존 Knowledge Graph 재사용 ({node_count}개 노드)")
@@ -230,7 +230,7 @@ def main():
     else:
         index = build_graph(storage_context)
 
-    # 4. 결과 확인 & 쿼리 테스트
+    # 4. Querying
     print_graph_summary(driver)
     test_query(index)
 

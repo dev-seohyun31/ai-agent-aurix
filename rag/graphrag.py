@@ -58,7 +58,6 @@ def setup_models():
     print("✅ 모델 설정 완료 (Gemini + bge-m3)")
 
 
-# ── 2. Vector DB 연결 ─────────────────────────────────
 def setup_vector_db():
     chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
     collection = chroma_client.get_or_create_collection(CHROMA_COLLECTION)
@@ -263,7 +262,6 @@ def vector_only_query(question: str, vector_index) -> dict:
     }
 
 
-# ── 7. 비교 모드 ─────────────────────────────────────
 def compare_mode(vector_index):
     test_questions = [
         "EVADC는 무엇인가?",
@@ -333,7 +331,6 @@ def interactive_mode(vector_index):
         print("-" * 50)
 
 
-# ── 메인 ─────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="GraphRAG 질문/답변")
     parser.add_argument(
@@ -342,10 +339,12 @@ def main():
     )
     args = parser.parse_args()
 
+    # 1. Configurations
     setup_models()
     vector_index = setup_vector_db()
     setup_knowledge_graph()  # 연결 확인용
 
+    # 2. Querying
     if args.compare:
         compare_mode(vector_index)
     else:

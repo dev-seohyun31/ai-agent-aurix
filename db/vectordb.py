@@ -10,7 +10,7 @@ import chromadb
 
 load_dotenv()
 
-# ── 1. 모델 설정 ──────────────────────────────────────
+# 0. Configurations
 Settings.llm = GoogleGenAI(
     model="gemini-2.5-flash",
     api_key=os.environ["GEMINI_API_KEY"],
@@ -23,21 +23,20 @@ Settings.llm = GoogleGenAI(
     )
 )
 
-# bge-m3 → 한국어 질문 + 영어 문서 동시 지원
 Settings.embed_model = HuggingFaceEmbedding(
-    model_name="BAAI/bge-m3"
+    model_name="BAAI/bge-m3" # bge-m3 → 한국어 질문 + 영어 문서 동시 지원
 )
 
 Settings.chunk_size = 512
 Settings.chunk_overlap = 50
 
-# ── 2. Vector DB 연결 ─────────────────────────────────
+# 1. Loading to chromadb
 chroma_client = chromadb.PersistentClient(path="../chroma_db")
 chroma_collection = chroma_client.get_or_create_collection("research_docs")
 vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
 storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
-# ── 3. 인덱싱 (기존 DB 있으면 재사용) ────────────────
+# 2. Indexing & Storing
 if chroma_collection.count() > 0:
     print(f"✅ 기존 인덱스 재사용 ({chroma_collection.count()}개 청크)")
     index = VectorStoreIndex.from_vector_store(vector_store)
@@ -55,7 +54,7 @@ else:
 
 print(f"📦 저장된 청크 수: {chroma_collection.count()}")
 
-# ── 4. 질문/답변 ──────────────────────────────────────
+# 3. Querying
 query_engine = index.as_query_engine(
     similarity_top_k=5,
     response_mode="tree_summarize"

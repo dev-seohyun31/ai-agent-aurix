@@ -1,46 +1,144 @@
 {
   "test_cases": [
     {
-      "id": "TC-001",
-      "type": "factual",
-      "description": "문서에 있는 정의 질문",
-      "question": "EVADC가 뭐야?",
-      "ground_truth": "EVADC는 Enhanced Versatile Analog-to-Digital Converter의 약자로, SAR(Successive Approximation Register) 원리를 사용하여 아날로그 입력값을 디지털 값으로 변환하는 모듈이다."
-    },
-    {
-      "id": "TC-002",
-      "type": "factual",
-      "description": "문서에 있는 수치 질문",
-      "question": "EVADC Fast Compare Cluster의 update rate는 얼마야?",
-      "ground_truth": "Fast Compare Cluster의 update rate는 0.2µs 이하이다."
-    },
-    {
-      "id": "TC-003",
-      "type": "factual",
-      "description": "문서에 있는 구조 질문",
-      "question": "EVADC Primary Converter Cluster 구조를 설명해줘",
-      "ground_truth": "Primary Converter Cluster는 8:1 multiplexer와 8-stage queue를 가지며, conversion time은 0.5µs 이하이다."
-    },
-    {
-      "id": "TC-004",
+      "id": "TC-H01",
       "type": "hallucination",
-      "description": "문서에 없는 내용 질문 — 할루시네이션 테스트",
-      "question": "EVADC를 자동차 브레이크 시스템에 어떻게 적용하나요?",
-      "ground_truth": "문서에서 찾을 수 없습니다"
-    },
-    {
-      "id": "TC-005",
-      "type": "hallucination",
-      "description": "문서에 없는 내용 질문 — 할루시네이션 테스트",
+      "description": "문서에 없는 내용 — 가격 질문",
       "question": "EVADC 가격은 얼마야?",
       "ground_truth": "문서에서 찾을 수 없습니다"
     },
     {
-      "id": "TC-006",
+      "id": "TC-H02",
+      "type": "hallucination",
+      "description": "문서에 없는 내용 — 브레이크 적용",
+      "question": "EVADC를 자동차 브레이크 시스템에 어떻게 적용하나요?",
+      "ground_truth": "문서에서 찾을 수 없습니다"
+    },
+    {
+      "id": "TC-H03",
+      "type": "hallucination",
+      "description": "문서에 없는 내용 — 제조사",
+      "question": "EVADC를 만든 회사는 어디야?",
+      "ground_truth": "문서에서 찾을 수 없습니다"
+    },
+    {
+      "id": "TC-F01",
+      "type": "factual",
+      "description": "EVADC의 기본 동작 원리 및 구성 요소 확인",
+      "question": "AURIX TC3xx EVADC의 기본 변환 원리와 각 변환기 블록의 구성 요소는 무엇인가요?",
+      "ground_truth": "EVADC는 SAR(Successive Approximation Register) 원리를 사용하여 아날로그 입력 전압을 디지털 값으로 변환합니다. 각 변환기 블록은 샘플 앤 홀드(sample&hold) 유닛과 실제 변환을 수행하는 컨버터 블록으로 구성됩니다."
+    },
+    {
+      "id": "TC-F02",
+      "type": "factual",
+      "description": "Primary 및 Secondary 컨버터 클러스터의 스펙 확인",
+      "question": "Primary 컨버터 클러스터와 Secondary 컨버터 클러스터의 멀티플렉서 구조와 큐(Queue) 스테이지 수는 각각 어떻게 되나요?",
+      "ground_truth": "Primary 컨버터 클러스터는 8:1 멀티플렉서와 8스테이지 큐를 갖추고 있습니다. 반면 Secondary 컨버터 클러스터는 16:1 멀티플렉서와 16스테이지 큐를 탑재하고 있습니다."
+    },
+    {
+      "id": "TC-F03",
+      "type": "factual",
+      "description": "Fast Compare 클러스터의 성능 스펙 확인",
+      "question": "Fast Compare 클러스터의 주요 특징과 업데이트 레이트(Update rate) 스펙은 어떻게 되나요?",
+      "ground_truth": "Fast Compare 클러스터는 단일 채널(Single channel)로 구성되며, 0.2µs 이하의 빠른 업데이트 레이트를 제공합니다. 이는 정확한 변환 값보다 임계값 초과 여부를 빠르게 판단해야 하는 응용 분야에 사용됩니다."
+    },
+    {
+      "id": "TC-F04",
+      "type": "factual",
+      "description": "EVADC의 클록 시스템 확인",
+      "question": "EVADC 모듈에서 사용되는 기본 모듈 클록(fADC)은 시스템의 어떤 클록 신호에 연결되나요?",
+      "ground_truth": "EVADC의 기본 모듈 클록인 fADC는 주변 장치 클록(Peripheral clock) 신호에 연결되어 동작합니다. 이를 통해 시스템의 다른 주변 장치들과 동기화된 동작을 수행할 수 있습니다."
+    },
+    {
+      "id": "TC-F05",
+      "type": "factual",
+      "description": "결과 레지스터의 구성 확인",
+      "question": "EVADC에서 각 채널의 변환 결과가 저장될 수 있는 레지스터의 명칭과 범위는 무엇인가요?",
+      "ground_truth": "변환 결과는 그룹별로 지정된 결과 레지스터인 GxRES0에서 GxRES15까지의 범위에 저장될 수 있습니다. 또한 특정 채널 전용 결과 레지스터나 글로벌 결과 레지스터에 저장되도록 설정할 수도 있습니다."
+    },
+    {
+      "id": "TC-F06",
+      "type": "factual",
+      "description": "요청 소스의 우선순위 처리 방식 확인",
+      "question": "우선순위가 높은 요청이 현재 진행 중인 낮은 우선순위 변환을 중단시키는 동작 모드의 명칭은 무엇인가요?",
+      "ground_truth": "해당 동작 모드는 'Cancel-inject-repeat' 모드입니다. 이 모드에서는 우선순위가 높은 채널의 변환 지연을 최소화하기 위해 현재 변환을 취소하고 즉시 높은 우선순위 변환을 시작합니다."
+    },
+    {
+      "id": "TC-F07",
+      "type": "factual",
+      "description": "경계값 모니터링 기능 확인",
+      "question": "EVADC의 결과 핸들링 기능 중, 프로그램 가능한 경계값과 결과를 비교하는 기능의 명칭은 무엇인가요?",
+      "ground_truth": "해당 기능의 명칭은 경계값 모니터링(Limit Checking)입니다. 이 기능을 통해 변환 결과가 설정된 특정 범위 내에 있는지 자동으로 확인하고 이벤트나 인터럽트를 발생시킬 수 있습니다."
+    },
+    {
+      "id": "TC-F08",
+      "type": "factual",
+      "description": "아날로그 입력 프리차지 설정 확인",
+      "question": "아날로그 입력 프리차지(Input Precharge) 기능을 사용할 때 설정 가능한 클록 사이클 값들은 무엇인가요?",
+      "ground_truth": "입력 프리차지 시간은 fADC 클록을 기준으로 8, 16, 또는 32 클록 사이클로 설정할 수 있습니다. 이는 GxICLASSi 또는 GLOBICLASSi 레지스터의 AIPS/AIPE 비트 필드를 통해 구성됩니다."
+    },
+    {
+      "id": "TC-F09",
+      "type": "factual",
+      "description": "서비스 요청 생성 이벤트 확인",
+      "question": "EVADC에서 서비스 요청(Service Request)을 생성할 수 있는 세 가지 주요 이벤트 유형은 무엇인가요?",
+      "ground_truth": "서비스 요청은 요청 소스 이벤트(요청 시퀀스 완료), 채널 이벤트(개별 채널 변환 완료), 결과 이벤트(결과 레지스터에 새로운 데이터 가용)의 세 가지 유형에 의해 발생할 수 있습니다."
+    },
+    {
+      "id": "TC-F10",
+      "type": "factual",
+      "description": "안전 기능 중 단선 검출 기능 확인",
+      "question": "EVADC에서 입력 신호의 연결 끊김을 확인하기 위해 사용하는 진단 기능의 명칭과 동작은 무엇인가요?",
+      "ground_truth": "단선 검출(Broken Wire Detection, BWD) 기능을 사용합니다. 이 기능은 입력을 샘플링하기 전에 컨버터 네트워크를 방전시켜, 신호가 연결되지 않았을 때 변환 결과값이 감소하는 것을 통해 단선 여부를 판단합니다."
+    },
+    {
+      "id": "TC-R01",
       "type": "retrieval",
-      "description": "여러 청크에 걸친 복합 질문",
-      "question": "EVADC의 세 가지 클러스터를 모두 설명해줘",
-      "ground_truth": "Primary Converter Cluster(8:1 multiplexer, 0.5µs 이하), Secondary Converter Cluster(16:1 multiplexer, 1µs 이하), Fast Compare Cluster(single channel, 0.2µs 이하)로 구성된다."
+      "description": "Primary와 Secondary 클러스터의 성능 및 용도 비교",
+      "question": "EVADC의 Primary 클러스터와 Secondary 클러스터의 성능 차이와 그에 따른 적합한 사용 용도를 비교하여 설명하세요.",
+      "ground_truth": "Primary 클러스터는 8:1 멀티플렉서를 사용하여 0.5µs 이하의 빠른 변환 시간을 제공하므로 고속 제어 루프에 적합합니다. 반면 Secondary 클러스터는 16:1 멀티플렉서를 가져 더 많은 채널을 수용할 수 있지만, 샘플링 시간이 길어져 1µs 이하의 변환 시간을 가집니다. 따라서 Primary는 속도가 중요한 신호에, Secondary는 채널 수가 많이 필요한 범용 신호 측정에 적합합니다."
+    },
+    {
+      "id": "TC-R02",
+      "type": "retrieval",
+      "description": "요청 소스 중재 및 처리 흐름 설명",
+      "question": "여러 요청 소스(Q0, Q1, Q2)에서 동시에 변환 요청이 발생했을 때, 중재자(Arbiter)가 이를 처리하는 전체적인 동작 흐름을 설명하세요.",
+      "ground_truth": "모든 요청 소스는 개별적으로 활성화될 수 있으며 각각 구성 가능한 우선순위를 가집니다. 중재자는 동시에 발생한 요청 중 가장 높은 우선순위를 가진 소스를 선택하여 아날로그 컨버터에 전달합니다. 이때 실행 모드 설정에 따라 현재 진행 중인 변환을 즉시 중단(Cancel-inject-repeat)하거나 완료 후 시작(Wait-for-start)하는 방식으로 시퀀스를 제어합니다."
+    },
+    {
+      "id": "TC-R03",
+      "type": "retrieval",
+      "description": "데이터 감소 및 필터링 기능의 연계 구조",
+      "question": "EVADC의 결과 핸들링 과정에서 데이터 감소(Data Reduction)와 FIR/IIR 필터링 기능이 어떻게 연계되어 동작하는지 설명하세요.",
+      "ground_truth": "변환된 결과값은 결과 레지스터에 저장되기 전 전처리 과정을 거칠 수 있습니다. 데이터 감소 모드에서는 최대 16개의 변환 결과를 누적하여 데이터율을 낮출 수 있으며, 특정 레지스터에서는 FIR 또는 IIR 필터를 활성화하여 디지털 안티-앨리어싱 필터링을 수행할 수 있습니다. 이러한 과정을 거친 최종 데이터가 레지스터에 가용해지면 결과 이벤트가 발생하여 CPU나 DMA에 알림을 보냅니다."
+    },
+    {
+      "id": "TC-R04",
+      "type": "retrieval",
+      "description": "동기화된 변환(Synchronized Conversion)의 목적과 메커니즘",
+      "question": "여러 ADC 커널 간의 동기화된 변환(Synchronized Conversion)이 왜 필요하며, 어떤 방식으로 샘플링이 이루어지는지 설명하세요.",
+      "ground_truth": "동기화된 변환은 전기 모터 제어와 같이 여러 아날로그 신호를 동일한 시점에 측정해야 하는 응용 분야에서 위상 오차를 최소화하기 위해 필요합니다. 마스터 커널이 변환을 요청하면 동기화 그룹 내의 슬레이브 커널들이 동시에 샘플링 단계를 시작합니다. 이를 통해 최대 4개의 채널까지 병렬로 동기화된 샘플링 및 변환을 수행할 수 있습니다."
+    },
+    {
+      "id": "TC-R05",
+      "type": "retrieval",
+      "description": "안전 진단 기능들의 상호 관계 비교",
+      "question": "EVADC에서 제공하는 세 가지 진단 기능인 Pull Down Diagnostics(PDD), Multiplexer Diagnostics(MD), Converter Diagnostics(CD)의 차이점과 전체적인 안전 확보 역할을 설명하세요.",
+      "ground_truth": "PDD는 강한 풀다운 장치를 연결해 센서와 멀티플렉서 간의 연결을 확인하고, MD는 약한 풀업/다운 장치로 멀티플렉서 자체의 동작 결함을 진단합니다. CD는 컨버터에 대체 신호를 입력하여 컨버터 블록의 정상 동작을 검증합니다. 이 기능들은 상호 보완적으로 작동하여 입력 핀부터 멀티플렉서를 거쳐 컨버터에 이르는 전체 아날로그 신호 경로의 무결성을 보장합니다."
+    },
+    {
+      "id": "TC-R06",
+      "type": "retrieval",
+      "description": "Fast Compare와 일반 ADC 채널의 동작 방식 비교",
+      "question": "일반적인 ADC 변환 시퀀스와 Fast Compare 채널의 동작 방식의 주요 차이점은 무엇인가요?",
+      "ground_truth": "일반 ADC 채널은 요청 소스에 의해 큐에 쌓인 채널들을 순차적으로 변환하여 정밀한 디지털 값을 생성하고 결과 레지스터에 저장합니다. 반면 Fast Compare 채널은 큐를 사용하지 않고 전용 입력 채널을 통해 입력 전압을 참조값과 직접 비교하여 크고 작음만을 판단합니다. 이는 복잡한 중재 과정 없이 약 200ns의 매우 빠른 속도로 결과(Boundary Flag)를 출력할 수 있다는 차이가 있습니다."
+    },
+    {
+      "id": "TC-R07",
+      "type": "retrieval",
+      "description": "EVADC와 타 모듈(GTM, DMA) 간의 시스템 통합 구조",
+      "question": "AURIX TC3xx 플랫폼 내에서 EVADC가 GTM 및 DMA와 어떻게 직접 연결되어 시스템 효율을 높이는지 설명하세요.",
+      "ground_truth": "EVADC는 GTM(Generic Timer Module)으로부터 트리거 신호나 게이트 신호를 직접 전달받아 정교한 타이밍에 변환을 시작할 수 있습니다. 변환이 완료되면 CPU의 개입 없이 DMA(Direct Memory Access)를 통해 결과 데이터를 메모리로 즉시 전송할 수 있는 경로가 구축되어 있습니다. 또한 Fast Compare의 경계값 플래그는 GTM으로 직접 전달되어 모터 제어 등의 실시간 피드백 루프를 하드웨어 수준에서 가속화합니다."
     }
   ]
 }

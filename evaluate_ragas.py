@@ -43,10 +43,12 @@ from datasets import Dataset
 # ── LlamaIndex imports ────────────────────────────────
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from llama_index.core import VectorStoreIndex, Settings
-from llama_index.llms.google_genai import GoogleGenAI
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.core import StorageContext
+from llama_index.core.response_synthesizers import get_response_synthesizer
+from llama_index.core.schema import QueryBundle
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.google_genai import GoogleGenAI
+from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.postprocessor.flag_embedding_reranker import FlagEmbeddingReranker
 import chromadb
 
@@ -123,10 +125,6 @@ def setup_vector_db():
 
 # ── 2. Vector DB 단독 실행 ────────────────────────────
 def run_vector(question: str, vector_index, reranker) -> dict:
-    from llama_index.core.schema import QueryBundle
-    from llama_index.core.query_engine import RetrieverQueryEngine
-    from llama_index.core.response_synthesizers import get_response_synthesizer
-
     # top_k=10 검색 → Reranker → 상위 5개
     retriever      = vector_index.as_retriever(similarity_top_k=10)
     nodes          = retriever.retrieve(question)

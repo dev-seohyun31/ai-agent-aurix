@@ -1,83 +1,95 @@
+"""
+db/vectordb.py
+PDF → ChromaDB 인덱싱 (ETL) + 대화형 질문/답변
+
+사용법:
+    python db/vectordb.py         # 인덱싱 후 대화형 질문/답변
+    python db/vectordb.py --reset # ChromaDB 초기화 후 재인덱싱
+"""
+
+import sys
 import os
-from dotenv import load_dotenv
+import argparse
+import shutil
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
-from llama_index.core import StorageContext
-from llama_index.llms.google_genai import GoogleGenAI
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.vector_stores.chroma import ChromaVectorStore
-from llama_index.postprocessor.flag_embedding_reranker import FlagEmbeddingReranker
-import chromadb
 
-load_dotenv()
+import config
+from core.models import setup_all
+from core.vector_store import get_vector_store_for_indexing, get_vector_index
 
-# 0. Configurations
-Settings.llm = GoogleGenAI(
-    model="gemini-2.5-flash",
-    api_key=os.environ["GEMINI_API_KEY"],
-    system_prompt=(
-        "You are a technical document assistant. "
-        "ALWAYS respond in Korean only. "
-        "NEVER mix other languages into your response. "
-        "Only use information from the provided documents. "
-        "If the answer is not in the documents, say '문서에서 찾을 수 없습니다'."
-    )
-)
 
-Settings.embed_model = HuggingFaceEmbedding(
-    model_name="BAAI/bge-m3" # bge-m3 → 한국어 질문 + 영어 문서 동시 지원
-)
+def build_index() -> VectorStoreIndex:
+    """PDF 로드 → 청킹 → 임베딩 → ChromaDB 저장"""
+    collection, vector_store, storage_context = get_vector_store_for_indexing()
 
-Settings.chunk_size = 256
-Settings.chunk_overlap = 32
+    Settings.chunk_size    = config.CHUNK_SIZE
+    Settings.chunk_overlap = config.CHUNK_OVERLAP
 
-# 1. Loading to chromadb
-chroma_client = chromadb.PersistentClient(path="../chroma_db")
-chroma_collection = chroma_client.get_or_create_collection("research_docs")
-vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    if collection.count() > 0:
+        print(f"✅ 기존 인덱스 재사용 ({collection.count()}개 청크)")
+        return VectorStoreIndex.from_vector_store(vector_store)
 
-# 2. Indexing & Storing
-if chroma_collection.count() > 0:
-    print(f"✅ 기존 인덱스 재사용 ({chroma_collection.count()}개 청크)")
-    index = VectorStoreIndex.from_vector_store(vector_store)
-else:
     print("📄 PDF 로딩 중...")
-    documents = SimpleDirectoryReader("../docs").load_data()
+    documents = SimpleDirectoryReader(config.DOCS_DIR).load_data()
     print(f"✅ {len(documents)}페이지 로드 완료")
+
     print("🔍 인덱싱 중...")
     index = VectorStoreIndex.from_documents(
         documents,
         storage_context=storage_context,
-        show_progress=True
+        show_progress=True,
     )
-    print("✅ 인덱싱 완료")
+    print(f"✅ 인덱싱 완료 — 저장된 청크 수: {collection.count()}")
+    return index
 
-print(f"📦 저장된 청크 수: {chroma_collection.count()}")
 
-# 3. Querying
-reranker = FlagEmbeddingReranker(
-    model="BAAI/bge-reranker-v2-m3",
-    top_n=5,
-)
-query_engine = index.as_query_engine(
-    similarity_top_k=20,
-    node_postprocessors=[reranker],
-    response_mode="tree_summarize"
-)
+def interactive(index: VectorStoreIndex, reranker):
+    """대화형 질문/답변 루프"""
+    from llama_index.core import Settings as S
+    query_engine = index.as_query_engine(
+        similarity_top_k=config.SIMILARITY_TOP_K,
+        node_postprocessors=[reranker],
+        response_mode="tree_summarize",
+    )
 
-print("\n💬 질문을 입력하세요 (종료: q)\n")
-while True:
-    question = input("질문: ").strip()
-    if question.lower() == "q":
-        break
+    print("\n💬 질문을 입력하세요 (종료: q)\n")
+    while True:
+        question = input("질문: ").strip()
+        if question.lower() == "q":
+            break
 
-    response = query_engine.query(question)
-    print(f"\n📝 답변:\n{response}\n")
+        response = query_engine.query(question)
+        print(f"\n📝 답변:\n{response}\n")
 
-    print("📚 참조 출처:")
-    for node in response.source_nodes:
-        fname = node.metadata.get("file_name", "알 수 없음")
-        score = round(node.score, 3) if node.score else "-"
-        print(f"  - {fname} (유사도: {score})")
-    print("-" * 50)
+        print("📚 참조 출처:")
+        for node in response.source_nodes:
+            fname = node.metadata.get("file_name", "알 수 없음")
+            score = round(node.score, 3) if node.score else "-"
+            print(f"  - {fname} (유사도: {score})")
+        print("-" * 50)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Vector DB 구축 및 질문/답변")
+    parser.add_argument("--reset", action="store_true", help="ChromaDB 초기화 후 재인덱싱")
+    args = parser.parse_args()
+
+    if args.reset and os.path.exists(config.CHROMA_DIR):
+        shutil.rmtree(config.CHROMA_DIR)
+        print("🗑️  ChromaDB 초기화 완료")
+
+    # 모델 초기화
+    reranker = setup_all()
+
+    # 인덱싱
+    index = build_index()
+
+    # 대화형 질문/답변
+    interactive(index, reranker)
+
+
+if __name__ == "__main__":
+    main()

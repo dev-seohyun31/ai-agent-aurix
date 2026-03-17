@@ -14,11 +14,13 @@ from neo4j import GraphDatabase
 
 from llama_index.core import VectorStoreIndex, Settings
 from llama_index.core.indices.knowledge_graph import KnowledgeGraphIndex
+from llama_index.core.schema import QueryBundle
 from llama_index.graph_stores.neo4j import Neo4jGraphStore
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.core import StorageContext
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.postprocessor.flag_embedding_reranker import FlagEmbeddingReranker
 import chromadb
 
 load_dotenv()
@@ -58,6 +60,17 @@ def setup_models():
     print("✅ 모델 설정 완료 (Gemini + bge-m3)")
 
 
+# ── 2. Reranker 설정 (한 번만 로드) ──────────────────
+def setup_reranker() -> FlagEmbeddingReranker:
+    reranker = FlagEmbeddingReranker(
+        model="BAAI/bge-reranker-v2-m3",
+        top_n=5,
+    )
+    print("✅ Reranker 로드 완료 (bge-reranker-v2-m3)")
+    return reranker
+
+
+# ── 3. Vector DB 연결 ─────────────────────────────────
 def setup_vector_db():
     chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
     collection = chroma_client.get_or_create_collection(CHROMA_COLLECTION)
@@ -73,7 +86,7 @@ def setup_vector_db():
     return index
 
 
-# ── 3. Knowledge Graph 연결 ───────────────────────────
+# ── 4. Knowledge Graph 연결 ───────────────────────────
 def setup_knowledge_graph():
     driver = GraphDatabase.driver(NEO4J_URL, auth=(NEO4J_USER, NEO4J_PASSWORD))
     with driver.session() as session:
@@ -101,13 +114,8 @@ def setup_knowledge_graph():
     return kg_index
 
 
-# ── 4. Knowledge Graph 직접 조회 ──────────────────────
+# ── 5. Knowledge Graph 직접 조회 ──────────────────────
 def query_graph(question: str, top_k: int = 10) -> str:
-    """
-    질문에서 키워드를 추출해 Neo4j에서 관련 관계를 직접 조회.
-    LLM 없이 Cypher로 직접 탐색하여 정확도 향상.
-    """
-    # 질문에서 핵심 키워드 추출 (영어 기술 용어 위주)
     keywords = []
     question_lower = question.lower()
 
@@ -130,6 +138,14 @@ def query_graph(question: str, top_k: int = 10) -> str:
         "converter": "converter",
         "신호": "signal",
         "signal": "signal",
+        "캘리브레이션": "calibration",
+        "calibration": "calibration",
+        "트리거": "trigger",
+        "trigger": "trigger",
+        "gtm": "gtm",
+        "dma": "dma",
+        "arbitration": "arbitration",
+        "중재": "arbitration",
     }
 
     for kor, eng in keyword_map.items():
@@ -137,10 +153,11 @@ def query_graph(question: str, top_k: int = 10) -> str:
             keywords.append(eng)
 
     if not keywords:
-        # 키워드 없으면 질문 단어 그대로 사용
+        stop_words = {"이야", "뭐야", "뭐", "어떤", "알려줘", "설명해줘",
+                      "이란", "이란?", "은?", "는?", "무엇", "어떻게", "왜"}
         keywords = [
             w for w in question_lower.split()
-            if len(w) > 2 and w not in ["이야", "뭐야", "뭐", "어떤", "알려줘", "설명해줘", "이란", "이란?", "은?", "는?"]
+            if len(w) > 2 and w not in stop_words
         ]
 
     if not keywords:
@@ -169,26 +186,29 @@ def query_graph(question: str, top_k: int = 10) -> str:
     return "\n".join(results) if results else ""
 
 
-# ── 5. GraphRAG 통합 쿼리 ─────────────────────────────
-def graphrag_query(question: str, vector_index, verbose: bool = False) -> dict:
+# ── 6. GraphRAG 통합 쿼리 ─────────────────────────────
+def graphrag_query(question: str, vector_index, reranker: FlagEmbeddingReranker,
+                   verbose: bool = False) -> dict:
     """
     Vector DB + Knowledge Graph 결합 쿼리
-
     흐름:
-    1. Vector DB → 유사 청크 검색
+    1. Vector DB → top_k=10 검색 → Reranker → 상위 5개
     2. Knowledge Graph → 관련 관계 직접 조회
     3. 둘을 합쳐서 LLM에 전달
     4. 출처 기반 답변 생성
     """
 
-    # ── STEP 1: Vector DB 검색 ──────────────────────
-    retriever = vector_index.as_retriever(similarity_top_k=5)
+    # ── STEP 1: Vector DB + Reranker ───────────────
+    retriever = vector_index.as_retriever(similarity_top_k=10)
     nodes = retriever.retrieve(question)
+    reranked_nodes = reranker.postprocess_nodes(
+        nodes, query_bundle=QueryBundle(question)
+    )
 
     chunks = []
     sources = []
     scores = []
-    for node in nodes:
+    for node in reranked_nodes:
         chunks.append(node.node.text)
         fname = node.node.metadata.get("file_name", "알 수 없음")
         score = round(node.score, 3) if node.score else 0
@@ -212,14 +232,11 @@ def graphrag_query(question: str, vector_index, verbose: bool = False) -> dict:
     full_context = "\n\n".join(context_parts)
 
     if verbose:
-        print(f"\n{BLUE}── Vector DB 검색 결과 ({len(chunks)}개 청크) ──{RESET}")
+        print(f"\n{BLUE}── Vector DB 검색 결과 ({len(chunks)}개 청크, Reranker 적용) ──{RESET}")
         for i, (chunk, score) in enumerate(zip(chunks, scores)):
             print(f"  [{i+1}] 유사도: {score} | {chunk[:100]}...")
         print(f"\n{BLUE}── Knowledge Graph 조회 결과 ──{RESET}")
-        if graph_context:
-            print(graph_context)
-        else:
-            print("  (관련 관계 없음)")
+        print(graph_context if graph_context else "  (관련 관계 없음)")
 
     # ── STEP 4: LLM 호출 ──────────────────────────
     prompt = f"""아래 정보만 근거로 질문에 답하세요.
@@ -242,10 +259,12 @@ def graphrag_query(question: str, vector_index, verbose: bool = False) -> dict:
     }
 
 
-# ── 6. Vector DB 단독 쿼리 (비교용) ──────────────────
-def vector_only_query(question: str, vector_index) -> dict:
+# ── 7. Vector DB 단독 쿼리 (비교용) ──────────────────
+def vector_only_query(question: str, vector_index,
+                      reranker: FlagEmbeddingReranker) -> dict:
     query_engine = vector_index.as_query_engine(
-        similarity_top_k=5,
+        similarity_top_k=10,
+        node_postprocessors=[reranker],
         response_mode="tree_summarize"
     )
     response = query_engine.query(question)
@@ -262,7 +281,8 @@ def vector_only_query(question: str, vector_index) -> dict:
     }
 
 
-def compare_mode(vector_index):
+# ── 8. 비교 모드 ──────────────────────────────────────
+def compare_mode(vector_index, reranker):
     test_questions = [
         "EVADC는 무엇인가?",
         "EVADC Primary Converter Cluster의 스펙은?",
@@ -278,29 +298,27 @@ def compare_mode(vector_index):
         print(f"{'─'*60}")
 
         # Vector DB 단독
-        v_result = vector_only_query(question, vector_index)
+        v_result = vector_only_query(question, vector_index, reranker)
         print(f"{BLUE}[Vector DB 단독]{RESET}")
-        print(f"  답변: {v_result['answer'][:200]}")
+        print(f"  답변: {v_result['answer'][:300]}")
         print(f"  출처: {', '.join(v_result['sources'])}")
-
         print()
 
         # GraphRAG
-        g_result = graphrag_query(question, vector_index)
+        g_result = graphrag_query(question, vector_index, reranker)
         print(f"{GREEN}[GraphRAG (Vector + Graph)]{RESET}")
-        print(f"  답변: {g_result['answer'][:200]}")
+        print(f"  답변: {g_result['answer'][:300]}")
         print(f"  출처: {', '.join(g_result['sources'])}")
         print(f"  그래프 활용: {'✅' if g_result['graph_used'] else '❌'}")
         if g_result['graph_triples']:
-            print(f"  참조 관계:")
             for triple in g_result['graph_triples'].split('\n')[:5]:
                 print(f"    {triple}")
 
         print(f"\n{'='*60}\n")
 
 
-# ── 8. 대화형 모드 ────────────────────────────────────
-def interactive_mode(vector_index):
+# ── 9. 대화형 모드 ────────────────────────────────────
+def interactive_mode(vector_index, reranker):
     print(f"\n{BOLD}💬 GraphRAG 질문/답변 (종료: q){RESET}")
     print(f"  --v 옵션: 상세 출력  예) EVADC란? --v\n")
 
@@ -314,7 +332,7 @@ def interactive_mode(vector_index):
         verbose = "--v" in user_input
         question = user_input.replace("--v", "").strip()
 
-        result = graphrag_query(question, vector_index, verbose=verbose)
+        result = graphrag_query(question, vector_index, reranker, verbose=verbose)
 
         print(f"\n{BOLD}📝 답변:{RESET}")
         print(result["answer"])
@@ -331,6 +349,7 @@ def interactive_mode(vector_index):
         print("-" * 50)
 
 
+# ── 메인 ─────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="GraphRAG 질문/답변")
     parser.add_argument(
@@ -341,14 +360,15 @@ def main():
 
     # 1. Configurations
     setup_models()
+    reranker     = setup_reranker()     # ← 한 번만 로드
     vector_index = setup_vector_db()
-    setup_knowledge_graph()  # 연결 확인용
+    setup_knowledge_graph()
 
     # 2. Querying
     if args.compare:
-        compare_mode(vector_index)
+        compare_mode(vector_index, reranker)
     else:
-        interactive_mode(vector_index)
+        interactive_mode(vector_index, reranker)
 
 
 if __name__ == "__main__":

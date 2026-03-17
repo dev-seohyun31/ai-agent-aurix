@@ -2,10 +2,11 @@ import os
 from dotenv import load_dotenv
 
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
+from llama_index.core import StorageContext
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
-from llama_index.core import StorageContext
+from llama_index.postprocessor.flag_embedding_reranker import FlagEmbeddingReranker
 import chromadb
 
 load_dotenv()
@@ -27,8 +28,8 @@ Settings.embed_model = HuggingFaceEmbedding(
     model_name="BAAI/bge-m3" # bge-m3 → 한국어 질문 + 영어 문서 동시 지원
 )
 
-Settings.chunk_size = 512
-Settings.chunk_overlap = 50
+Settings.chunk_size = 256
+Settings.chunk_overlap = 32
 
 # 1. Loading to chromadb
 chroma_client = chromadb.PersistentClient(path="../chroma_db")
@@ -55,8 +56,13 @@ else:
 print(f"📦 저장된 청크 수: {chroma_collection.count()}")
 
 # 3. Querying
+reranker = FlagEmbeddingReranker(
+    model="BAAI/bge-reranker-v2-m3",
+    top_n=5,
+)
 query_engine = index.as_query_engine(
-    similarity_top_k=5,
+    similarity_top_k=20,
+    node_postprocessors=[reranker],
     response_mode="tree_summarize"
 )
 
